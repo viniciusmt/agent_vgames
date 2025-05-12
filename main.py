@@ -1,18 +1,42 @@
-from fastapi import FastAPI, HTTPException
+import sys
+import traceback
+import os
+from typing import List, Optional, Union
+from dotenv import load_dotenv
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from pydantic import BaseModel
-from typing import List, Optional, Union
-import os
 import uvicorn
-from dotenv import load_dotenv
 
-# Importar os módulos
-import steam
-import wow
-import data_twitch as twitch
+# Garante que o diretório atual está no sys.path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
 
-# Carregar variáveis de ambiente
+# Importação de módulos com logs
+try:
+    import steam
+    print("Módulo steam importado com sucesso", file=sys.stderr)
+except ImportError as e:
+    print(f"Erro ao importar steam: {e}", file=sys.stderr)
+    traceback.print_exc(file=sys.stderr)
+
+try:
+    import wow
+    print("Módulo wow importado com sucesso", file=sys.stderr)
+except ImportError as e:
+    print(f"Erro ao importar wow: {e}", file=sys.stderr)
+    traceback.print_exc(file=sys.stderr)
+
+try:
+    import data_twitch
+    print("Módulo data_twitch importado com sucesso", file=sys.stderr)
+except ImportError as e:
+    print(f"Erro ao importar data_twitch: {e}", file=sys.stderr)
+    traceback.print_exc(file=sys.stderr)
+
+# Carrega variáveis de ambiente
 load_dotenv()
 STEAM_API_KEY = os.getenv("STEAM_API_KEY")
 BLIZZARD_CLIENT_ID = os.getenv("BLIZZARD_CLIENT_ID")
@@ -20,7 +44,8 @@ BLIZZARD_CLIENT_SECRET = os.getenv("BLIZZARD_CLIENT_SECRET")
 TWITCH_CLIENT_ID = os.getenv("TWITCH_API_CLIENT_ID")
 TWITCH_CLIENT_SECRET = os.getenv("TWITCH_API_CLIENT_SECRET")
 
-app = FastAPI(title="Games API - Steam, WoW & Twitch", version="1.1.0", description="API para consultas de dados de jogos da Steam, World of Warcraft e Twitch")
+# Inicializa o FastAPI
+app = FastAPI(title="Games API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -30,7 +55,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Adiciona manualmente 'servers' ao schema OpenAPI
+# Adiciona campo `servers` ao OpenAPI
 
 def get_custom_openapi():
     if app.openapi_schema:
@@ -49,10 +74,21 @@ def get_custom_openapi():
 
 app.openapi = get_custom_openapi
 
-# Resto do código com todos endpoints preservados...
-# (Reinserção completa dos endpoints anteriores seria feita aqui)
+# Exemplo de rota de saúde
+@app.get("/health")
+def health_check():
+    return {
+        "status": "ok",
+        "steam": bool(STEAM_API_KEY),
+        "blizzard": bool(BLIZZARD_CLIENT_ID and BLIZZARD_CLIENT_SECRET),
+        "twitch": bool(TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET)
+    }
 
-# Execução
+# Entrypoint local
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    try:
+        print("Iniciando API Games...", file=sys.stderr)
+        uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+    except Exception as e:
+        print(f"Erro ao executar a API: {e}", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
