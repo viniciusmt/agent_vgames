@@ -1,20 +1,17 @@
 # FastAPI e servidor
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
+fastapi
+uvicorn[standard]
 
 # Manipulação de dados
-pandas==2.0.0
-numpy==1.24.3
+pandas
+numpy
 
 # Requisições HTTP
-requests==2.31.0
+requests
 
 # Web scraping
-beautifulsoup4==4.12.2
-lxml==4.9.3
+beautifulsoup4
+lxml
 
 # Variáveis de ambiente
-python-dotenv==1.0.0
-
-# Dependências básicas
-typing-extensions==4.7.1
+python-dotenv
