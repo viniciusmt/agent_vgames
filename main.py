@@ -22,6 +22,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+class RecentGamesRequest(BaseModel):
+    app_ids: Optional[List[Union[str, int]]] = None
+    app_id: Optional[Union[str, int]] = None
+    num_players: Optional[int] = 10
+
+class SearchGamesRequest(BaseModel):
+    game_names: List[str]
+    max_results: Optional[int] = 10
+
+class SearchGameByNameRequest(BaseModel):
+    game_name: str
+
+class AdvancedSearchRequest(BaseModel):
+    query: str
+    filters: Optional[dict] = None
+
+
 class GameDataRequest(BaseModel):
     app_ids: Optional[List[Union[str, int]]] = None
     app_id: Optional[Union[str, int]] = None
