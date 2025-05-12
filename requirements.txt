@@ -1,12 +1,9 @@
 # FastAPI e servidor
 fastapi==0.104.1
-uvicorn==0.24.0
-
-# FastMCP SDK para compatibilidade MCP
-git+https://github.com/modelcontextprotocol/python-sdk.git@main
+uvicorn[standard]==0.24.0
 
 # Manipulação de dados
-pandas==2.1.4
+pandas==2.0.0
 numpy==1.24.3
 
 # Requisições HTTP
@@ -14,9 +11,10 @@ requests==2.31.0
 
 # Web scraping
 beautifulsoup4==4.12.2
+lxml==4.9.3
 
 # Variáveis de ambiente
 python-dotenv==1.0.0
 
-# Para processamento de dados Steam
-lxml==4.9.3
+# Dependências básicas
+typing-extensions==4.7.1
