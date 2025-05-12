@@ -1,0 +1,19 @@
+# FastAPI e servidor
+fastapi==0.104.1
+uvicorn==0.24.0
+
+# Manipulação de dados
+pandas==2.1.4
+numpy==1.24.3
+
+# Requisições HTTP
+requests==2.31.0
+
+# Web scraping
+beautifulsoup4==4.12.2
+
+# Variáveis de ambiente
+python-dotenv==1.0.0
+
+# Para processamento de dados Steam
+lxml==4.9.3
