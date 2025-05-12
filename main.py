@@ -54,8 +54,7 @@ app = FastAPI(
     description="API completa para dados de Steam, World of Warcraft e Twitch",
     version="1.0.0",
     servers=[
-        {"url": "https://agent-vgames.onrender.com", "description": "Servidor Render"},
-        {"url": "http://localhost:8000", "description": "Servidor Local"}
+        {"url": "https://agent-vgames.onrender.com", "description": "Servidor Render"}
     ],
     openapi_url="/openapi.json",
     docs_url="/docs",
@@ -230,7 +229,7 @@ class WoWAuctionDataRequest(BaseModel):
 @app.post("/wow/character-info", summary="Obter informações de personagem")
 async def wow_character_info(request: WoWCharacterInfoRequest):
     """
-    Obtém informações detalhadas de um personagem de World of Warcraft.
+    Obtém informações completas de um personagem WoW.
     
     Args:
         character_name: Nome do personagem
@@ -238,7 +237,7 @@ async def wow_character_info(request: WoWCharacterInfoRequest):
         region: Região do servidor (padrão: "us")
         
     Returns:
-        dict: Informações detalhadas do personagem (perfil, estatísticas, equipamentos e conquistas)
+        dict: Perfil, estatísticas, equipamentos e conquistas
     """
     try:
         if not (BLIZZARD_CLIENT_ID and BLIZZARD_CLIENT_SECRET):
@@ -499,8 +498,7 @@ def get_custom_openapi():
         routes=app.routes,
     )
     openapi_schema["servers"] = [
-        {"url": "https://agent-vgames.onrender.com", "description": "Servidor Render"},
-        {"url": "http://localhost:8000", "description": "Servidor Local"}
+        {"url": "https://agent-vgames.onrender.com", "description": "Servidor Render"}
     ]
     app.openapi_schema = openapi_schema
     return app.openapi_schema
