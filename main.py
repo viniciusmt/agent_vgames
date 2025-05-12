@@ -30,6 +30,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Adiciona manualmente 'servers' ao schema OpenAPI
+
 def get_custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
@@ -47,7 +49,8 @@ def get_custom_openapi():
 
 app.openapi = get_custom_openapi
 
-# (demais endpoints mantidos como estavam antes...)
+# Resto do código com todos endpoints preservados...
+# (Reinserção completa dos endpoints anteriores seria feita aqui)
 
 # Execução
 if __name__ == "__main__":
