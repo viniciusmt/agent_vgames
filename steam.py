@@ -3,7 +3,172 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from collections import Counter
 
+import requests
+import pandas as pd
+from bs4 import BeautifulSoup
+import numpy as np
+from collections import Counter
+import json
+import re
 
+# ... código existente ...
+
+def search_game_ids(game_names, max_results=10):
+    """
+    Busca os IDs de jogos na Steam baseado nos nomes.
+    
+    Args:
+        game_names (list): Lista de nomes de jogos para buscar
+        max_results (int): Número máximo de resultados por jogo
+        
+    Returns:
+        pandas.DataFrame: DataFrame com nome do jogo, app_id e informações adicionais
+    """
+    all_results = []
+    
+    for game_name in game_names:
+        try:
+            # API de busca da Steam
+            search_url = "https://store.steampowered.com/api/storesearch/"
+            params = {
+                "term": game_name,
+                "l": "english",
+                "cc": "US"
+            }
+            
+            response = requests.get(search_url, params=params)
+            data = response.json()
+            
+            if "items" in data:
+                for item in data["items"][:max_results]:
+                    all_results.append({
+                        "search_term": game_name,
+                        "app_id": item.get("id"),
+                        "name": item.get("name"),
+                        "price": item.get("price", {}).get("final", 0) / 100 if item.get("price") else 0,
+                        "discount_percent": item.get("price", {}).get("discount_percent", 0),
+                        "type": item.get("type", ""),
+                        "platforms": {
+                            "windows": item.get("platforms", {}).get("windows", False),
+                            "mac": item.get("platforms", {}).get("mac", False),
+                            "linux": item.get("platforms", {}).get("linux", False)
+                        },
+                        "release_date": item.get("release_date", {}).get("date") if item.get("release_date") else None,
+                        "capsule_image": item.get("tiny_image", "")
+                    })
+            
+        except Exception as e:
+            print(f"Erro ao buscar '{game_name}': {e}")
+            # Adiciona um registro de erro para não perder a busca
+            all_results.append({
+                "search_term": game_name,
+                "app_id": None,
+                "name": f"ERROR: {str(e)}",
+                "price": 0,
+                "discount_percent": 0,
+                "type": "error",
+                "platforms": {"windows": False, "mac": False, "linux": False},
+                "release_date": None,
+                "capsule_image": ""
+            })
+    
+    return pd.DataFrame(all_results)
+
+def get_game_details_by_name(game_name):
+    """
+    Busca detalhes de um jogo específico pelo nome.
+    
+    Args:
+        game_name (str): Nome do jogo
+        
+    Returns:
+        dict: Informações detalhadas do primeiro resultado encontrado
+    """
+    try:
+        # Busca o ID primeiro
+        search_results = search_game_ids([game_name], max_results=1)
+        
+        if search_results.empty or search_results.iloc[0]["app_id"] is None:
+            return {
+                "success": False,
+                "error": f"Jogo '{game_name}' não encontrado"
+            }
+        
+        app_id = search_results.iloc[0]["app_id"]
+        
+        # Busca detalhes completos usando o ID
+        game_data = get_steam_game_data([app_id])
+        
+        if not game_data.empty:
+            return {
+                "success": True,
+                "data": game_data.iloc[0].to_dict()
+            }
+        else:
+            return {
+                "success": False,
+                "error": f"Não foi possível obter detalhes para '{game_name}'"
+            }
+            
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+def search_games_advanced(query, filters=None):
+    """
+    Busca avançada de jogos com filtros opcionais.
+    
+    Args:
+        query (str): Termo de busca
+        filters (dict): Filtros opcionais como:
+            - price_range: (min, max) - faixa de preço em USD
+            - platforms: ['windows', 'mac', 'linux'] - plataformas
+            - type: 'game' | 'dlc' | 'music' - tipo de item
+            
+    Returns:
+        pandas.DataFrame: DataFrame com resultados filtrados
+    """
+    try:
+        # Busca inicial
+        results = search_game_ids([query], max_results=50)
+        
+        if filters and not results.empty:
+            # Filtro por preço
+            if "price_range" in filters:
+                min_price, max_price = filters["price_range"]
+                results = results[
+                    (results["price"] >= min_price) & 
+                    (results["price"] <= max_price)
+                ]
+            
+            # Filtro por plataformas
+            if "platforms" in filters:
+                platform_filters = []
+                for platform in filters["platforms"]:
+                    if platform in ["windows", "mac", "linux"]:
+                        platform_column = f"platforms_{platform}"
+                        platform_filters.append(results["platforms"].str[platform] == True)
+                
+                if platform_filters:
+                    # Aplicar OR para plataformas (jogo disponível em qualquer uma das plataformas)
+                    platform_filter = platform_filters[0]
+                    for pf in platform_filters[1:]:
+                        platform_filter = platform_filter | pf
+                    results = results[platform_filter]
+            
+            # Filtro por tipo
+            if "type" in filters:
+                results = results[results["type"] == filters["type"]]
+        
+        return results
+        
+    except Exception as e:
+        print(f"Erro na busca avançada: {e}")
+        return pd.DataFrame()
+
+# ... resto do código existente ...
 def get_current_players(app_id):
     url = f"http://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?appid={app_id}"
     response = requests.get(url).json()
