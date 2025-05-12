@@ -386,6 +386,11 @@ class TwitchTopGamesRequest(BaseModel):
     limit: Optional[int] = 100
 
 # ===================== ENDPOINTS TWITCH =====================
+
+# Função auxiliar para verificar credenciais Twitch
+def check_twitch_credentials():
+    if not (TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET):
+        raise HTTPException(status_code=400, detail="Credenciais da Twitch não configuradas")
 @app.post("/twitch/search-games", summary="Buscar IDs de jogos na Twitch")
 async def twitch_search_games(request: TwitchGameSearchRequest):
     """
@@ -398,6 +403,7 @@ async def twitch_search_games(request: TwitchGameSearchRequest):
         dict: Informações dos jogos encontrados
     """
     try:
+        check_twitch_credentials()
         result = data_twitch.search_game_ids(request.game_names, TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET)
         return {"success": True, "data": result.to_dict("records")}
     except Exception as e:
@@ -416,6 +422,7 @@ async def twitch_get_channels(request: TwitchChannelsRequest):
         dict: Informações dos canais
     """
     try:
+        check_twitch_credentials()
         result = data_twitch.get_twitch_channel_data_bulk(request.channel_names, TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET)
         return {"success": True, "data": result.to_dict("records")}
     except Exception as e:
@@ -434,6 +441,7 @@ async def twitch_get_game_info(request: TwitchGameInfoRequest):
         dict: Informações do jogo
     """
     try:
+        check_twitch_credentials()
         result = data_twitch.get_twitch_game_data(request.game_name, TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET)
         return result
     except Exception as e:
@@ -454,6 +462,7 @@ async def twitch_get_live_streams(request: TwitchLiveStreamsRequest):
         dict: Dados das streams ao vivo
     """
     try:
+        check_twitch_credentials()
         result = data_twitch.get_live_streams_for_games(request.game_ids, TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, request.language, request.limit)
         return {"success": True, "data": result.to_dict("records")}
     except Exception as e:
@@ -472,6 +481,7 @@ async def twitch_get_top_games(request: TwitchTopGamesRequest):
         dict: Lista dos jogos mais populares
     """
     try:
+        check_twitch_credentials()
         result = data_twitch.get_top_games(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, request.limit)
         return {"success": True, "data": result.to_dict("records")}
     except Exception as e:
