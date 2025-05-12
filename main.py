@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 # Importar os módulos
 import steam
 import wow
-import twitch
+import data_twitch
 
 # Carregar variáveis de ambiente
 load_dotenv()
