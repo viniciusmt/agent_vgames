@@ -1,10 +1,10 @@
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
+from pydantic import BaseModel
+from typing import List, Optional, Union
 import os
 import sys
-from typing import List, Dict, Any, Optional, Union
 from dotenv import load_dotenv
 import traceback
 
@@ -40,6 +40,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Modelos Pydantic para requests
+class GameDataRequest(BaseModel):
+    app_ids: Optional[List[Union[str, int]]] = None
+    app_id: Optional[Union[str, int]] = None
+    language: Optional[str] = "portuguese"
+    max_reviews: Optional[int] = 50
+
+class CurrentPlayersRequest(BaseModel):
+    app_id: Union[str, int]
+
+class HistoricalDataRequest(BaseModel):
+    app_ids: Optional[List[Union[str, int]]] = None
+    app_id: Optional[Union[str, int]] = None
+
+class GameReviewsRequest(BaseModel):
+    app_ids: Optional[List[Union[str, int]]] = None
+    app_id: Optional[Union[str, int]] = None
+    language: Optional[str] = "portuguese"
+    max_reviews: Optional[int] = 50
+
+class RecentGamesRequest(BaseModel):
+    app_ids: Optional[List[Union[str, int]]] = None
+    app_id: Optional[Union[str, int]] = None
+    num_players: Optional[int] = 10
+
 def get_custom_openapi():
     """Personaliza a descrição OpenAPI."""
     if app.openapi_schema:
@@ -73,41 +98,34 @@ def mcp_openapi():
 # Sobrescreve a função openapi padrão do FastAPI
 app.openapi = get_custom_openapi
 
+# Helper function para processar app_ids
+def process_app_ids(request_data) -> List[int]:
+    """Processa app_ids ou app_id e retorna uma lista de inteiros."""
+    app_ids = request_data.app_ids
+    if not app_ids:
+        if request_data.app_id:
+            app_ids = [request_data.app_id]
+        else:
+            raise HTTPException(status_code=400, detail="app_ids ou app_id é obrigatório")
+    
+    # Converter para lista de inteiros
+    try:
+        return [int(id) for id in app_ids]
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail="app_ids devem ser números válidos")
+
 # ENDPOINTS STEAM
 @app.post("/steam/game-data", 
          description="Obtém dados detalhados de jogos da Steam incluindo informações básicas, preço, gêneros, categorias e reviews básicos.",
          summary="Dados detalhados de jogos")
-async def steam_game_data(request: Request):
+async def steam_game_data(request: GameDataRequest):
     """
     Obtém dados detalhados de jogos da Steam.
-    
-    Body Parameters:
-    - app_ids (list) ou app_id (int/str): ID(s) de jogos na Steam
-    - language (str, optional): Idioma para as descrições e reviews (padrão: portuguese)  
-    - max_reviews (int, optional): Número máximo de reviews a serem coletados (padrão: 50)
-    
-    Returns:
-    - Dados detalhados dos jogos incluindo nome, descrição, preço, gêneros, categorias, reviews
     """
     try:
-        body = await request.json()
+        app_ids = process_app_ids(request)
         
-        # Aceita tanto app_ids (lista) quanto app_id (único)
-        app_ids = body.get("app_ids")
-        if not app_ids:
-            app_id = body.get("app_id")
-            if app_id:
-                app_ids = [int(app_id)]
-            else:
-                raise HTTPException(status_code=400, detail="app_ids ou app_id é obrigatório")
-        
-        # Garantir que sejam inteiros
-        app_ids = [int(id) for id in app_ids] if isinstance(app_ids, list) else [int(app_ids)]
-        
-        language = body.get("language", "portuguese")
-        max_reviews = body.get("max_reviews", 50)
-        
-        result = steam.get_steam_game_data(app_ids, language, max_reviews)
+        result = steam.get_steam_game_data(app_ids, request.language, request.max_reviews)
         return {"success": True, "data": result.to_dict("records")}
     except Exception as e:
         print(f"Erro em steam_game_data: {str(e)}", file=sys.stderr)
@@ -116,25 +134,13 @@ async def steam_game_data(request: Request):
 @app.post("/steam/current-players",
          description="Obtém o número atual de jogadores online para um jogo específico da Steam.",
          summary="Jogadores atuais online")
-async def current_players(request: Request):
+async def current_players(request: CurrentPlayersRequest):
     """
     Obtém o número atual de jogadores para um jogo específico.
-    
-    Body Parameters:
-    - app_id (int/str): ID do jogo na Steam
-    
-    Returns:
-    - Número atual de jogadores online no jogo
     """
     try:
-        body = await request.json()
-        app_id = body.get("app_id")
-        
-        if not app_id:
-            raise HTTPException(status_code=400, detail="app_id é obrigatório")
-        
         # Converter para inteiro
-        app_id = int(app_id)
+        app_id = int(request.app_id)
         
         result = steam.get_current_players(app_id)
         return {"success": True, "data": {"current_players": result}}
@@ -145,30 +151,12 @@ async def current_players(request: Request):
 @app.post("/steam/historical-data",
          description="Obtém dados históricos de jogadores para jogos da Steam extraindo informações do SteamCharts.",
          summary="Dados históricos de jogadores")
-async def historical_data(request: Request):
+async def historical_data(request: HistoricalDataRequest):
     """
     Obtém dados históricos de jogadores para jogos da Steam.
-    
-    Body Parameters:
-    - app_ids (list) ou app_id (int/str): ID(s) de jogos na Steam
-    
-    Returns:
-    - Dados históricos incluindo jogadores médios, pico, alterações mensais
     """
     try:
-        body = await request.json()
-        
-        # Aceita tanto app_ids (lista) quanto app_id (único)
-        app_ids = body.get("app_ids")
-        if not app_ids:
-            app_id = body.get("app_id")
-            if app_id:
-                app_ids = [int(app_id)]
-            else:
-                raise HTTPException(status_code=400, detail="app_ids ou app_id é obrigatório")
-        
-        # Garantir que sejam inteiros
-        app_ids = [int(id) for id in app_ids] if isinstance(app_ids, list) else [int(app_ids)]
+        app_ids = process_app_ids(request)
         
         result = steam.get_historical_data_for_games(app_ids)
         return {"success": True, "data": result.to_dict("records")}
@@ -179,37 +167,14 @@ async def historical_data(request: Request):
 @app.post("/steam/game-reviews",
          description="Coleta reviews detalhados de jogos da Steam incluindo texto, sentimento, ID do usuário e horas jogadas.",
          summary="Reviews de jogos")
-async def game_reviews(request: Request):
+async def game_reviews(request: GameReviewsRequest):
     """
     Obtém avaliações detalhadas de jogos da Steam.
-    
-    Body Parameters:
-    - app_ids (list) ou app_id (int/str): ID(s) de jogos na Steam
-    - language (str, optional): Idioma das avaliações (padrão: portuguese)
-    - max_reviews (int, optional): Número máximo de avaliações por jogo (padrão: 50)
-    
-    Returns:
-    - Lista de reviews com texto, sentimento (positivo/negativo), ID do usuário, horas jogadas
     """
     try:
-        body = await request.json()
+        app_ids = process_app_ids(request)
         
-        # Aceita tanto app_ids (lista) quanto app_id (único)
-        app_ids = body.get("app_ids")
-        if not app_ids:
-            app_id = body.get("app_id")
-            if app_id:
-                app_ids = [int(app_id)]
-            else:
-                raise HTTPException(status_code=400, detail="app_ids ou app_id é obrigatório")
-        
-        # Garantir que sejam inteiros
-        app_ids = [int(id) for id in app_ids] if isinstance(app_ids, list) else [int(app_ids)]
-        
-        language = body.get("language", "portuguese")
-        max_reviews = body.get("max_reviews", 50)
-        
-        result = steam.get_steam_game_reviews(app_ids, language, max_reviews)
+        result = steam.get_steam_game_reviews(app_ids, request.language, request.max_reviews)
         return {"success": True, "data": result.to_dict("records")}
     except Exception as e:
         print(f"Erro em game_reviews: {str(e)}", file=sys.stderr)
@@ -218,38 +183,17 @@ async def game_reviews(request: Request):
 @app.post("/steam/recent-games",
          description="Obtém jogos recentes mais populares jogados por usuários que avaliaram um jogo específico. Requer STEAM_API_KEY.",
          summary="Jogos recentes de avaliadores")
-async def recent_games(request: Request):
+async def recent_games(request: RecentGamesRequest):
     """
     Obtém jogos recentes jogados por usuários que avaliaram jogos específicos.
-    
-    Body Parameters:
-    - app_ids (list) ou app_id (int/str): ID(s) de jogos na Steam
-    - num_players (int, optional): Número de jogadores a analisar (padrão: 10)
-    
-    Returns:
-    - Lista de jogos populares com nome, ID e contagem de jogadores que os jogaram recentemente
     """
     try:
-        body = await request.json()
-        
-        # Aceita tanto app_ids (lista) quanto app_id (único)
-        app_ids = body.get("app_ids")
-        if not app_ids:
-            app_id = body.get("app_id")
-            if app_id:
-                app_ids = [int(app_id)]
-            else:
-                raise HTTPException(status_code=400, detail="app_ids ou app_id é obrigatório")
-        
-        # Garantir que sejam inteiros
-        app_ids = [int(id) for id in app_ids] if isinstance(app_ids, list) else [int(app_ids)]
-        
-        num_players = body.get("num_players", 10)
+        app_ids = process_app_ids(request)
         
         if not STEAM_API_KEY:
             raise HTTPException(status_code=500, detail="STEAM_API_KEY não configurada")
         
-        result = steam.get_recent_games_for_multiple_apps(app_ids, STEAM_API_KEY, num_players)
+        result = steam.get_recent_games_for_multiple_apps(app_ids, STEAM_API_KEY, request.num_players)
         return {"success": True, "data": result.to_dict("records")}
     except Exception as e:
         print(f"Erro em recent_games: {str(e)}", file=sys.stderr)
