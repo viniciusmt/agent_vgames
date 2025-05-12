@@ -103,3 +103,8 @@ def consulta_guilda_wow(guild_names: list[str], realm_slug: str = "azralon", reg
         "limit": limit,
         "results": results
     }
+
+def get_guild_info(client_id, client_secret, region, realm, guild_name):
+    os.environ["WOW_CLIENT_ID"] = client_id
+    os.environ["WOW_CLIENT_SECRET"] = client_secret
+    return consulta_guilda_wow([guild_name], realm_slug=realm, region=region, limit=10)
