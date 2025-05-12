@@ -4,6 +4,7 @@ from fastapi.openapi.utils import get_openapi
 from pydantic import BaseModel
 from typing import List, Optional, Union
 import os
+import uvicorn
 from dotenv import load_dotenv
 import steam
 
@@ -123,3 +124,10 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "steam_api_configured": bool(STEAM_API_KEY)}
+
+# Configuração para execução no Render
+if __name__ == "__main__":
+    # O Render fornece a porta através da variável de ambiente PORT
+    port = int(os.environ.get("PORT", 10000))
+    print(f"Starting server on port {port}")
+    uvicorn.run(app, host="0.0.0.0", port=port)
