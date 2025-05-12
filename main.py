@@ -44,7 +44,6 @@ BLIZZARD_CLIENT_SECRET = os.getenv("BLIZZARD_CLIENT_SECRET")
 TWITCH_CLIENT_ID = os.getenv("TWITCH_API_CLIENT_ID")
 TWITCH_CLIENT_SECRET = os.getenv("TWITCH_API_CLIENT_SECRET")
 
-# Inicializa o FastAPI
 app = FastAPI(title="Games API", version="1.0.0")
 
 app.add_middleware(
@@ -54,8 +53,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Adiciona campo `servers` ao OpenAPI
 
 def get_custom_openapi():
     if app.openapi_schema:
@@ -74,7 +71,6 @@ def get_custom_openapi():
 
 app.openapi = get_custom_openapi
 
-# Exemplo de rota de saúde
 @app.get("/health")
 def health_check():
     return {
@@ -84,7 +80,50 @@ def health_check():
         "twitch": bool(TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET)
     }
 
-# Entrypoint local
+# MODELS TWITCH
+class TwitchGameSearchRequest(BaseModel):
+    game_names: List[str]
+
+class TwitchChannelsRequest(BaseModel):
+    channel_names: List[str]
+
+class TwitchGameInfoRequest(BaseModel):
+    game_name: str
+
+class TwitchLiveStreamsRequest(BaseModel):
+    game_ids: List[str]
+    language: Optional[str] = "pt"
+    limit: Optional[int] = 100
+
+class TwitchTopGamesRequest(BaseModel):
+    limit: Optional[int] = 100
+
+# ENDPOINTS TWITCH
+@app.post("/twitch/search-games")
+async def twitch_search_games(request: TwitchGameSearchRequest):
+    result = data_twitch.search_game_ids(request.game_names, TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET)
+    return {"success": True, "data": result.to_dict("records")}
+
+@app.post("/twitch/channels")
+async def twitch_get_channels(request: TwitchChannelsRequest):
+    result = data_twitch.get_twitch_channel_data_bulk(request.channel_names, TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET)
+    return {"success": True, "data": result.to_dict("records")}
+
+@app.post("/twitch/game-info")
+async def twitch_get_game_info(request: TwitchGameInfoRequest):
+    result = data_twitch.get_twitch_game_data(request.game_name, TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET)
+    return result
+
+@app.post("/twitch/live-streams")
+async def twitch_get_live_streams(request: TwitchLiveStreamsRequest):
+    result = data_twitch.get_live_streams_for_games(request.game_ids, TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, request.language, request.limit)
+    return {"success": True, "data": result.to_dict("records")}
+
+@app.post("/twitch/top-games")
+async def twitch_get_top_games(request: TwitchTopGamesRequest):
+    result = data_twitch.get_top_games(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, request.limit)
+    return {"success": True, "data": result.to_dict("records")}
+
 if __name__ == "__main__":
     try:
         print("Iniciando API Games...", file=sys.stderr)
