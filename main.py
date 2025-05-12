@@ -57,6 +57,33 @@ def process_app_ids(request_data) -> List[int]:
     except (ValueError, TypeError):
         raise HTTPException(status_code=400, detail="app_ids devem ser números válidos")
 
+# ------------------ OPENAPI PERSONALIZADO ------------------
+def get_custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    openapi_schema = get_openapi(
+        title="Steam Games API",
+        version="1.0.0",
+        description="API para consultas de dados de jogos via Steam",
+        routes=app.routes,
+    )
+    openapi_schema["servers"] = [
+        {"url": "https://agent-vgames.onrender.com", "description": "Servidor Render"}
+    ]
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+app.openapi = get_custom_openapi
+
+@app.get("/openapi.json")
+def custom_openapi_route():
+    return get_custom_openapi()
+
+@app.get("/.well-known/openapi.json")
+def mcp_openapi():
+    return get_custom_openapi()
+# ----------------------------------------------------------
+
 @app.post("/steam/game-data")
 async def steam_game_data(request: GameDataRequest):
     app_ids = process_app_ids(request)
