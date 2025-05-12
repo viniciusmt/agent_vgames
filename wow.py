@@ -43,26 +43,6 @@ def get_guild_roster(region: str, realm_slug: str, guild_slug: str, token: str):
 
     return response.json().get("members", [])
 
-def get_character_profile_basic(region: str, realm_slug: str, character_name: str, token: str):
-    url = f"https://{region}.api.blizzard.com/profile/wow/character/{realm_slug}/{character_name.lower()}"
-    headers = {"Authorization": f"Bearer {token}"}
-    params = {"namespace": f"profile-{region}", "locale": "en_US"}
-
-    response = requests.get(url, headers=headers, params=params)
-    if response.status_code == 404:
-        safe_name = unidecode(character_name).encode("ascii", errors="ignore").decode()
-        log.warning(f"Personagem '{safe_name}' não encontrado.")
-        return None
-    elif response.status_code == 401:
-        raise Exception("Token inválido ou expirado (401).")
-    response.raise_for_status()
-
-    char = response.json()
-    return {
-        "name": char.get("name"),
-        "level": char.get("level")
-    }
-
 def consulta_guilda_wow(guild_names: list[str], realm_slug: str = "azralon", region: str = "us", offset: int = 0, limit: int = 50, basic_only: bool = True) -> dict:
     client_id = os.getenv("WOW_CLIENT_ID")
     client_secret = os.getenv("WOW_CLIENT_SECRET")
@@ -92,9 +72,7 @@ def consulta_guilda_wow(guild_names: list[str], realm_slug: str = "azralon", reg
             character = member.get("character")
             if character:
                 if count >= offset:
-                    profile = get_character_profile_basic(region, realm_slug.lower(), character.get("name"), token)
-                    if profile:
-                        results.append(profile)
+                    results.append({"name": character.get("name"), "level": character.get("level", "?")})
                 count += 1
 
     return {
@@ -107,4 +85,4 @@ def consulta_guilda_wow(guild_names: list[str], realm_slug: str = "azralon", reg
 def get_guild_info(client_id, client_secret, region, realm, guild_name):
     os.environ["WOW_CLIENT_ID"] = client_id
     os.environ["WOW_CLIENT_SECRET"] = client_secret
-    return consulta_guilda_wow([guild_name], realm_slug=realm, region=region, limit=10)
+    return consulta_guilda_wow([guild_name], realm_slug=realm, region=region, limit=50)
