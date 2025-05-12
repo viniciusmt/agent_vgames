@@ -124,6 +124,8 @@ async def twitch_get_top_games(request: TwitchTopGamesRequest):
     result = data_twitch.get_top_games(TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, request.limit)
     return {"success": True, "data": result.to_dict("records")}
 
+# AQUI ENTRARÃO ENDPOINTS STEAM E WOW (por questão de espaço, inseriremos no próximo commit)
+
 if __name__ == "__main__":
     try:
         print("Iniciando API Games...", file=sys.stderr)
