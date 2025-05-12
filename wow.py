@@ -27,6 +27,9 @@ def get_access_token(client_id, client_secret, region="us") -> str:
 def clean_guild_name(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", unidecode(name).lower()).strip("-")
 
+def clean_realm_slug(realm: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", unidecode(realm).lower()).strip("-")
+
 def get_guild_roster(region: str, realm_slug: str, guild_slug: str, token: str):
     url = f"https://{region}.api.blizzard.com/data/wow/guild/{realm_slug}/{guild_slug}/roster"
     headers = {"Authorization": f"Bearer {token}"}
@@ -184,6 +187,7 @@ def get_character_achievements(region, realm_slug, character_name, token, max_ac
         return []
 
 def get_complete_character_info(client_id, client_secret, region, realm_slug, character_name):
+    realm_slug = clean_realm_slug(realm_slug)
     token = get_access_token(client_id, client_secret, region)
     info = get_character_data(region, realm_slug, character_name, token)
     stats = get_character_statistics(region, realm_slug, character_name, token)
