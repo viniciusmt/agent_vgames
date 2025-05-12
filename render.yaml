@@ -11,4 +11,12 @@ services:
         sync: false
       - key: BLIZZARD_CLIENT_SECRET
         sync: false
+      - key: TWITCH_API_CLIENT_ID
+        sync: false
+      - key: TWITCH_API_CLIENT_SECRET
+        sync: false
+      - key: TWITCH_REFRESH_TOKEN
+        sync: false
+      - key: TWITCH_TOKEN_URL
+        sync: false
     healthCheckPath: /health
