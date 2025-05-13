@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import uvicorn
 import logging
@@ -49,18 +50,16 @@ BLIZZARD_CLIENT_SECRET = os.getenv("BLIZZARD_CLIENT_SECRET")
 TWITCH_CLIENT_ID = os.getenv("TWITCH_API_CLIENT_ID")
 TWITCH_CLIENT_SECRET = os.getenv("TWITCH_API_CLIENT_SECRET")
 
+# Configuração do FastAPI
 app = FastAPI(
     title="Gaming API",
     description="API completa para dados de Steam, World of Warcraft e Twitch",
     version="1.0.0",
-    servers=[
-        {"url": "https://agent-vgames.onrender.com", "description": "Servidor Render"}
-    ],
-    openapi_url="/openapi.json",
     docs_url="/docs",
     redoc_url="/redoc"
 )
 
+# Configuração CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -68,6 +67,76 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ===================== CONFIGURAÇÃO OPENAPI =====================
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+    
+    # Adiciona informações do servidor
+    openapi_schema["servers"] = [
+        {
+            "url": "https://agent-vgames.onrender.com",
+            "description": "Servidor Render (Produção)"
+        },
+        {
+            "url": "http://localhost:8000",
+            "description": "Servidor Local (Desenvolvimento)"
+        }
+    ]
+    
+    # Adiciona informações de contato
+    openapi_schema["info"]["contact"] = {
+        "name": "Gaming API Support",
+        "url": "https://agent-vgames.onrender.com",
+    }
+    
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+app.openapi = custom_openapi
+
+# ===================== ROOT ENDPOINT =====================
+@app.get("/", summary="Gaming API - Página Principal")
+def read_root():
+    """Endpoint principal da Gaming API"""
+    return {
+        "message": "Gaming API v1.0.0",
+        "description": "API completa para dados de Steam, World of Warcraft e Twitch",
+        "documentation": "/docs",
+        "openapi_schema": "/openapi.json",
+        "health_check": "/health",
+        "endpoints": {
+            "steam": [
+                "/steam/game-data",
+                "/steam/current-players",
+                "/steam/historical-data",
+                "/steam/game-reviews",
+                "/steam/recent-games"
+            ],
+            "wow": [
+                "/wow/character-info",
+                "/wow/search-characters",
+                "/wow/guild-info",
+                "/wow/search-guilds",
+                "/wow/auction-data"
+            ],
+            "twitch": [
+                "/twitch/search-games",
+                "/twitch/channels",
+                "/twitch/game-info",
+                "/twitch/live-streams",
+                "/twitch/top-games"
+            ]
+        }
+    }
 
 # ===================== HEALTH CHECK =====================
 @app.get("/health", summary="Verificação de saúde da API")
@@ -79,6 +148,11 @@ def health_check():
         "blizzard": bool(BLIZZARD_CLIENT_ID and BLIZZARD_CLIENT_SECRET),
         "twitch": bool(TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET)
     }
+
+# ===================== ENDPOINT PARA OPENAPI.JSON =====================
+@app.get("/openapi.json", include_in_schema=False)
+async def get_openapi_endpoint():
+    return JSONResponse(app.openapi())
 
 # ===================== MODELS STEAM =====================
 class SteamGameDataRequest(BaseModel):
@@ -102,7 +176,9 @@ class SteamRecentGamesRequest(BaseModel):
     num_players: Optional[int] = 10
 
 # ===================== ENDPOINTS STEAM =====================
-@app.post("/steam/game-data", summary="Obter dados detalhados de jogos")
+@app.post("/steam/game-data", 
+          summary="Obter dados detalhados de jogos",
+          tags=["Steam"])
 async def steam_game_data(request: SteamGameDataRequest):
     """
     Obtém dados detalhados de jogos da Steam.
@@ -122,7 +198,9 @@ async def steam_game_data(request: SteamGameDataRequest):
         log.error(f"Erro em steam_game_data: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/steam/current-players", summary="Obter número atual de jogadores")
+@app.post("/steam/current-players", 
+          summary="Obter número atual de jogadores",
+          tags=["Steam"])
 async def current_players(request: SteamCurrentPlayersRequest):
     """
     Obtém o número atual de jogadores para um jogo específico.
@@ -140,7 +218,9 @@ async def current_players(request: SteamCurrentPlayersRequest):
         log.error(f"Erro em current_players: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/steam/historical-data", summary="Obter dados históricos de jogadores")
+@app.post("/steam/historical-data", 
+          summary="Obter dados históricos de jogadores",
+          tags=["Steam"])
 async def historical_data(request: SteamHistoricalDataRequest):
     """
     Obtém dados históricos de jogadores para jogos da Steam.
@@ -158,7 +238,9 @@ async def historical_data(request: SteamHistoricalDataRequest):
         log.error(f"Erro em historical_data: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/steam/game-reviews", summary="Obter avaliações de jogos")
+@app.post("/steam/game-reviews", 
+          summary="Obter avaliações de jogos",
+          tags=["Steam"])
 async def game_reviews(request: SteamGameReviewsRequest):
     """
     Obtém avaliações de jogos da Steam.
@@ -178,7 +260,9 @@ async def game_reviews(request: SteamGameReviewsRequest):
         log.error(f"Erro em game_reviews: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/steam/recent-games", summary="Obter jogos recentes populares")
+@app.post("/steam/recent-games", 
+          summary="Obter jogos recentes populares",
+          tags=["Steam"])
 async def recent_games(request: SteamRecentGamesRequest):
     """
     Obtém jogos recentes jogados por usuários que avaliaram jogos específicos.
@@ -226,7 +310,9 @@ class WoWAuctionDataRequest(BaseModel):
     limit: Optional[int] = 100
 
 # ===================== ENDPOINTS WOW =====================
-@app.post("/wow/character-info", summary="Obter informações de personagem")
+@app.post("/wow/character-info", 
+          summary="Obter informações de personagem",
+          tags=["World of Warcraft"])
 async def wow_character_info(request: WoWCharacterInfoRequest):
     """
     Obtém informações completas de um personagem WoW.
@@ -254,7 +340,9 @@ async def wow_character_info(request: WoWCharacterInfoRequest):
         log.error(f"Erro em wow_character_info: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/wow/search-characters", summary="Pesquisar múltiplos personagens")
+@app.post("/wow/search-characters", 
+          summary="Pesquisar múltiplos personagens",
+          tags=["World of Warcraft"])
 async def wow_search_characters(request: WoWSearchCharactersRequest):
     """
     Pesquisa múltiplos personagens de World of Warcraft.
@@ -288,7 +376,9 @@ async def wow_search_characters(request: WoWSearchCharactersRequest):
         log.error(f"Erro em wow_search_characters: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/wow/guild-info", summary="Obter informações de guilda")
+@app.post("/wow/guild-info", 
+          summary="Obter informações de guilda",
+          tags=["World of Warcraft"])
 async def wow_guild_info(request: WoWGuildInfoRequest):
     """
     Obtém informações detalhadas de uma guilda de World of Warcraft.
@@ -315,7 +405,9 @@ async def wow_guild_info(request: WoWGuildInfoRequest):
         log.error(f"Erro em wow_guild_info: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/wow/search-guilds", summary="Pesquisar múltiplas guildas")
+@app.post("/wow/search-guilds", 
+          summary="Pesquisar múltiplas guildas",
+          tags=["World of Warcraft"])
 async def wow_search_guilds(request: WoWSearchGuildsRequest):
     """
     Pesquisa múltiplas guildas de World of Warcraft.
@@ -342,7 +434,9 @@ async def wow_search_guilds(request: WoWSearchGuildsRequest):
         log.error(f"Erro em wow_search_guilds: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/wow/auction-data", summary="Obter dados do leilão")
+@app.post("/wow/auction-data", 
+          summary="Obter dados do leilão",
+          tags=["World of Warcraft"])
 async def wow_auction_data(request: WoWAuctionDataRequest):
     """
     Obtém dados do leilão (mercado) de World of Warcraft.
@@ -390,7 +484,10 @@ class TwitchTopGamesRequest(BaseModel):
 def check_twitch_credentials():
     if not (TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET):
         raise HTTPException(status_code=400, detail="Credenciais da Twitch não configuradas")
-@app.post("/twitch/search-games", summary="Buscar IDs de jogos na Twitch")
+
+@app.post("/twitch/search-games", 
+          summary="Buscar IDs de jogos na Twitch",
+          tags=["Twitch"])
 async def twitch_search_games(request: TwitchGameSearchRequest):
     """
     Busca IDs de jogos na Twitch com base em seus nomes.
@@ -409,7 +506,9 @@ async def twitch_search_games(request: TwitchGameSearchRequest):
         log.error(f"Erro em twitch_search_games: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/twitch/channels", summary="Obter informações de canais")
+@app.post("/twitch/channels", 
+          summary="Obter informações de canais",
+          tags=["Twitch"])
 async def twitch_get_channels(request: TwitchChannelsRequest):
     """
     Obtém informações de múltiplos canais da Twitch.
@@ -428,7 +527,9 @@ async def twitch_get_channels(request: TwitchChannelsRequest):
         log.error(f"Erro em twitch_get_channels: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/twitch/game-info", summary="Obter informações de jogo")
+@app.post("/twitch/game-info", 
+          summary="Obter informações de jogo",
+          tags=["Twitch"])
 async def twitch_get_game_info(request: TwitchGameInfoRequest):
     """
     Obtém informações detalhadas de um jogo na Twitch.
@@ -447,7 +548,9 @@ async def twitch_get_game_info(request: TwitchGameInfoRequest):
         log.error(f"Erro em twitch_get_game_info: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/twitch/live-streams", summary="Obter streams ao vivo")
+@app.post("/twitch/live-streams", 
+          summary="Obter streams ao vivo",
+          tags=["Twitch"])
 async def twitch_get_live_streams(request: TwitchLiveStreamsRequest):
     """
     Busca streams ao vivo para uma lista de jogos.
@@ -468,7 +571,9 @@ async def twitch_get_live_streams(request: TwitchLiveStreamsRequest):
         log.error(f"Erro em twitch_get_live_streams: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/twitch/top-games", summary="Obter jogos mais populares")
+@app.post("/twitch/top-games", 
+          summary="Obter jogos mais populares",
+          tags=["Twitch"])
 async def twitch_get_top_games(request: TwitchTopGamesRequest):
     """
     Obtém a lista dos jogos mais populares na Twitch.
@@ -486,24 +591,6 @@ async def twitch_get_top_games(request: TwitchTopGamesRequest):
     except Exception as e:
         log.error(f"Erro em twitch_get_top_games: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-# ===================== CONFIGURAÇÃO CUSTOMIZADA =====================
-def get_custom_openapi():
-    if app.openapi_schema:
-        return app.openapi_schema
-    openapi_schema = get_openapi(
-        title=app.title,
-        version=app.version,
-        description=app.description,
-        routes=app.routes,
-    )
-    openapi_schema["servers"] = [
-        {"url": "https://agent-vgames.onrender.com", "description": "Servidor Render"}
-    ]
-    app.openapi_schema = openapi_schema
-    return app.openapi_schema
-
-app.openapi = get_custom_openapi
 
 # ===================== MAIN =====================
 if __name__ == "__main__":
