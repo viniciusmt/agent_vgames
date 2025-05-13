@@ -132,7 +132,10 @@ def read_root():
                 "/steam/current-players",
                 "/steam/historical-data",
                 "/steam/game-reviews",
-                "/steam/recent-games"
+                "/steam/recent-games",
+                "/steam/search-games",
+                "/steam/game-by-name",
+                "/steam/advanced-search"
             ],
             "wow": [
                 "/wow/character-info",
@@ -187,6 +190,21 @@ class SteamGameReviewsRequest(BaseModel):
 class SteamRecentGamesRequest(BaseModel):
     app_ids: List[int]
     num_players: Optional[int] = 10
+
+class SteamSearchGamesRequest(BaseModel):
+    game_names: List[str]
+    max_results: Optional[int] = 10
+
+class SteamGameByNameRequest(BaseModel):
+    game_name: str
+
+class SteamAdvancedSearchRequest(BaseModel):
+    query: str
+    filters: Optional[dict] = None
+
+class SteamGameIDsRequest(BaseModel):
+    game_names: List[str]
+    max_results: Optional[int] = 10
 
 # ===================== ENDPOINTS STEAM =====================
 @app.post("/steam/game-data", 
@@ -294,6 +312,71 @@ async def recent_games(request: SteamRecentGamesRequest):
         return {"success": True, "data": result.to_dict("records")}
     except Exception as e:
         log.error(f"Erro em recent_games: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/steam/search-games", 
+          summary="Buscar jogos por nome",
+          tags=["Steam"])
+async def search_games(request: SteamSearchGamesRequest):
+    """
+    Busca por jogos na Steam baseado nos nomes.
+    
+    Args:
+        game_names: Lista de nomes de jogos para buscar
+        max_results: Número máximo de resultados por jogo
+        
+    Returns:
+        dict: DataFrame com informações dos jogos encontrados
+    """
+    try:
+        result = steam.search_game_ids(request.game_names, request.max_results)
+        return {"success": True, "data": result.to_dict("records")}
+    except Exception as e:
+        log.error(f"Erro em search_games: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/steam/game-by-name", 
+          summary="Obter detalhes de jogo por nome",
+          tags=["Steam"])
+async def get_game_by_name(request: SteamGameByNameRequest):
+    """
+    Busca detalhes completos de um jogo específico pelo nome.
+    
+    Args:
+        game_name: Nome do jogo
+        
+    Returns:
+        dict: Informações detalhadas do primeiro resultado encontrado
+    """
+    try:
+        result = steam.get_game_details_by_name(request.game_name)
+        return result
+    except Exception as e:
+        log.error(f"Erro em get_game_by_name: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/steam/advanced-search", 
+          summary="Busca avançada de jogos",
+          tags=["Steam"])
+async def advanced_search(request: SteamAdvancedSearchRequest):
+    """
+    Busca avançada de jogos com filtros opcionais.
+    
+    Args:
+        query: Termo de busca
+        filters: Filtros opcionais como:
+            - price_range: (min, max) - faixa de preço em USD
+            - platforms: ['windows', 'mac', 'linux'] - plataformas
+            - type: 'game' | 'dlc' | 'music' - tipo de item
+            
+    Returns:
+        dict: DataFrame com resultados filtrados
+    """
+    try:
+        result = steam.search_games_advanced(request.query, request.filters)
+        return {"success": True, "data": result.to_dict("records")}
+    except Exception as e:
+        log.error(f"Erro em advanced_search: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # ===================== MODELS WOW =====================
