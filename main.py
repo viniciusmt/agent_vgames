@@ -56,7 +56,8 @@ app = FastAPI(
     description="API completa para dados de Steam, World of Warcraft e Twitch",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    openapi_url="/openapi.json"
 )
 
 # Configuração CORS
@@ -80,17 +81,29 @@ def custom_openapi():
         routes=app.routes,
     )
     
-    # Adiciona informações do servidor
-    openapi_schema["servers"] = [
-        {
-            "url": "https://agent-vgames.onrender.com",
-            "description": "Servidor Render (Produção)"
-        },
-        {
-            "url": "http://localhost:8000",
-            "description": "Servidor Local (Desenvolvimento)"
-        }
-    ]
+    # Detecta o ambiente e define servidor apropriado
+    is_production = os.getenv("RENDER_SERVICE_NAME") is not None
+    
+    if is_production:
+        # Em produção, apenas o servidor do Render
+        openapi_schema["servers"] = [
+            {
+                "url": "https://agent-vgames.onrender.com",
+                "description": "Servidor Render (Produção)"
+            }
+        ]
+    else:
+        # Em desenvolvimento, adiciona servidor local
+        openapi_schema["servers"] = [
+            {
+                "url": "http://localhost:8000",
+                "description": "Servidor Local (Desenvolvimento)"
+            },
+            {
+                "url": "https://agent-vgames.onrender.com",
+                "description": "Servidor Render (Produção)"
+            }
+        ]
     
     # Adiciona informações de contato
     openapi_schema["info"]["contact"] = {
