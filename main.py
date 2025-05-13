@@ -215,9 +215,9 @@ async def steam_game_data(request: SteamGameDataRequest):
     Obtém dados detalhados de jogos da Steam.
     
     Args:
-        app_ids: Lista de IDs de jogos na Steam
-        language: Idioma para as descrições e reviews (padrão: portuguese)
-        max_reviews: Número máximo de reviews a serem coletados
+        app_ids: Lista de IDs de jogos
+        language: Idioma (padrão: portuguese)
+        max_reviews: Máximo de reviews
         
     Returns:
         dict: Informações detalhadas dos jogos
@@ -234,7 +234,7 @@ async def steam_game_data(request: SteamGameDataRequest):
           tags=["Steam"])
 async def current_players(request: SteamCurrentPlayersRequest):
     """
-    Obtém o número atual de jogadores para um jogo específico.
+    Obtém o número atual de jogadores.
     
     Args:
         app_id: ID do jogo na Steam
@@ -254,13 +254,13 @@ async def current_players(request: SteamCurrentPlayersRequest):
           tags=["Steam"])
 async def historical_data(request: SteamHistoricalDataRequest):
     """
-    Obtém dados históricos de jogadores para jogos da Steam.
+    Obtém dados históricos de jogadores.
     
     Args:
-        app_ids: Lista de IDs de jogos na Steam
+        app_ids: Lista de IDs de jogos
         
     Returns:
-        dict: Dados históricos de jogadores
+        dict: Dados históricos
     """
     try:
         result = steam.get_historical_data_for_games(request.app_ids)
@@ -277,9 +277,9 @@ async def game_reviews(request: SteamGameReviewsRequest):
     Obtém avaliações de jogos da Steam.
     
     Args:
-        app_ids: Lista de IDs de jogos na Steam
-        language: Idioma das avaliações (padrão: portuguese)
-        max_reviews: Número máximo de avaliações por jogo
+        app_ids: Lista de IDs de jogos
+        language: Idioma (padrão: portuguese)
+        max_reviews: Máximo de avaliações
         
     Returns:
         dict: Avaliações de jogos
@@ -296,14 +296,14 @@ async def game_reviews(request: SteamGameReviewsRequest):
           tags=["Steam"])
 async def recent_games(request: SteamRecentGamesRequest):
     """
-    Obtém jogos recentes jogados por usuários que avaliaram jogos específicos.
+    Obtém jogos recentes populares.
     
     Args:
-        app_ids: Lista de IDs de jogos na Steam
+        app_ids: Lista de IDs de jogos
         num_players: Número de jogadores a analisar
         
     Returns:
-        dict: Jogos recentes populares entre jogadores
+        dict: Jogos recentes populares
     """
     try:
         if not STEAM_API_KEY:
@@ -319,14 +319,14 @@ async def recent_games(request: SteamRecentGamesRequest):
           tags=["Steam"])
 async def search_games(request: SteamSearchGamesRequest):
     """
-    Busca por jogos na Steam baseado nos nomes.
+    Busca jogos na Steam baseado nos nomes.
     
     Args:
-        game_names: Lista de nomes de jogos para buscar
-        max_results: Número máximo de resultados por jogo
+        game_names: Lista de nomes de jogos
+        max_results: Máximo de resultados por jogo
         
     Returns:
-        dict: DataFrame com informações dos jogos encontrados
+        dict: Informações dos jogos encontrados
     """
     try:
         result = steam.search_game_ids(request.game_names, request.max_results)
@@ -346,7 +346,7 @@ async def get_game_by_name(request: SteamGameByNameRequest):
         game_name: Nome do jogo
         
     Returns:
-        dict: Informações detalhadas do primeiro resultado encontrado
+        dict: Informações detalhadas do jogo
     """
     try:
         result = steam.get_game_details_by_name(request.game_name)
@@ -360,17 +360,14 @@ async def get_game_by_name(request: SteamGameByNameRequest):
           tags=["Steam"])
 async def advanced_search(request: SteamAdvancedSearchRequest):
     """
-    Busca avançada de jogos com filtros opcionais.
+    Busca avançada com filtros opcionais.
     
     Args:
         query: Termo de busca
-        filters: Filtros opcionais como:
-            - price_range: (min, max) - faixa de preço em USD
-            - platforms: ['windows', 'mac', 'linux'] - plataformas
-            - type: 'game' | 'dlc' | 'music' - tipo de item
-            
+        filters: Filtros (price_range, platforms, type)
+        
     Returns:
-        dict: DataFrame com resultados filtrados
+        dict: Resultados filtrados
     """
     try:
         result = steam.search_games_advanced(request.query, request.filters)
