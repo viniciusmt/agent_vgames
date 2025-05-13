@@ -20,3 +20,12 @@ services:
       - key: TWITCH_TOKEN_URL
         sync: false
     healthCheckPath: /health
+    # Explicitamente define a porta externa
+    httpPort: 80
+    # Configurações adicionalais para lidar com timeouts
+    plan: starter
+    runtime: docker
+    disk:
+      name: agent-vgames-disk
+      mountPath: /opt/render/project/disk
+      sizeGB: 1
